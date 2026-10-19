@@ -1,0 +1,391 @@
+openapi: 3.0.3
+info:
+  title: MedEx API
+  version: 0.1.0
+  description: |
+    A REST API for Bangladesh medicine information.
+
+    **Data source & authorization:** This API ships with a **synthetic fixture
+    provider** by default. It does **not** serve live MedEx data. No official or
+    licensed MedEx API was available at the time of writing, and no written
+    authorization to scrape or redistribute MedEx's database exists. All records
+    returned by the default provider are clearly marked `source.kind: "fixture"`
+    and must never be used for clinical decisions. See DATA_SOURCES.md.
+  license:
+    name: MIT
+servers:
+  - url: http://127.0.0.1:3000
+    description: Local development server
+tags:
+  - name: System
+    description: Health and readiness probes
+  - name: Medicines
+    description: Medicine brand search and detail
+  - name: Generics
+    description: Generic / active-ingredient entries
+  - name: Manufacturers
+    description: Pharmaceutical manufacturers
+  - name: Categories
+    description: Therapeutic / classification categories
+
+paths:
+  /api/v1/health:
+    get:
+      tags: [System]
+      summary: Service health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Health" }
+  /api/v1/ready:
+    get:
+      tags: [System]
+      summary: Readiness probe
+      responses:
+        "200":
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready: { type: boolean }
+                  provider: { type: string }
+
+  /api/v1/medicines/search:
+    get:
+      tags: [Medicines]
+      summary: Search medicines
+      description: Search by name, generic, active ingredient, or manufacturer.
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicinePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /api/v1/medicines/{id}:
+    get:
+      tags: [Medicines]
+      summary: Get a medicine by id
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: A single medicine
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicineSingle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/generics/search:
+    get:
+      tags: [Generics]
+      summary: Search generics
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GenericPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/generics/{id}:
+    get:
+      tags: [Generics]
+      summary: Get a generic by id
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: A single generic
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GenericSingle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/manufacturers:
+    get:
+      tags: [Manufacturers]
+      summary: List manufacturers
+      parameters:
+        - $ref: "#/components/parameters/QOptional"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManufacturerPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/manufacturers/{id}:
+    get:
+      tags: [Manufacturers]
+      summary: Get a manufacturer by id
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: A single manufacturer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManufacturerSingle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/manufacturers/{id}/medicines:
+    get:
+      tags: [Manufacturers]
+      summary: List a manufacturer's medicines
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - $ref: "#/components/parameters/QOptional"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicinePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      parameters:
+        - $ref: "#/components/parameters/QOptional"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategoryPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/v1/categories/{id}:
+    get:
+      tags: [Categories]
+      summary: Get a category by id
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: A single category
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CategorySingle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/v1/categories/{id}/medicines:
+    get:
+      tags: [Categories]
+      summary: List a category's medicines
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - $ref: "#/components/parameters/QOptional"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MedicinePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  parameters:
+    Q:
+      in: query
+      name: q
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+      description: Search query (1-200 chars).
+    QOptional:
+      in: query
+      name: q
+      required: false
+      schema: { type: string, maxLength: 200 }
+      description: Optional name filter.
+    Page:
+      in: query
+      name: page
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      in: query
+      name: limit
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Id:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, pattern: "^[A-Za-z0-9_-]+$", maxLength: 64 }
+
+  schemas:
+    Source:
+      type: object
+      properties:
+        provider: { type: string, example: fixture }
+        providerName: { type: string }
+        kind: { type: string, enum: [fixture, live] }
+        sourceUrl: { type: string, nullable: true }
+        retrievedAt: { type: string, format: date-time, nullable: true }
+    PageMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+        hasNext: { type: boolean }
+        hasPrev: { type: boolean }
+        query: { type: string, nullable: true }
+    Medicine:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        generic: { type: string }
+        activeIngredients: { type: array, items: { type: string } }
+        strength: { type: string }
+        dosageForm: { type: string }
+        manufacturerId: { type: string }
+        manufacturerName: { type: string }
+        package: { type: string }
+        priceBdt: { type: number, nullable: true }
+        categories: { type: array, items: { type: string } }
+        source: { $ref: "#/components/schemas/Source" }
+    Generic:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        activeIngredients: { type: array, items: { type: string } }
+        description: { type: string, nullable: true }
+        brandCount: { type: integer }
+        source: { $ref: "#/components/schemas/Source" }
+    Manufacturer:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        website: { type: string, nullable: true }
+        productCount: { type: integer }
+        source: { $ref: "#/components/schemas/Source" }
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        medicineCount: { type: integer }
+        source: { $ref: "#/components/schemas/Source" }
+    MedicinePage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Medicine" } }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+        source: { $ref: "#/components/schemas/Source" }
+    GenericPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Generic" } }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+        source: { $ref: "#/components/schemas/Source" }
+    ManufacturerPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Manufacturer" } }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+        source: { $ref: "#/components/schemas/Source" }
+    CategoryPage:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Category" } }
+        meta: { $ref: "#/components/schemas/PageMeta" }
+        source: { $ref: "#/components/schemas/Source" }
+    MedicineSingle:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Medicine" }
+        source: { $ref: "#/components/schemas/Source" }
+    GenericSingle:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Generic" }
+        source: { $ref: "#/components/schemas/Source" }
+    ManufacturerSingle:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Manufacturer" }
+        source: { $ref: "#/components/schemas/Source" }
+    CategorySingle:
+      type: object
+      properties:
+        data: { $ref: "#/components/schemas/Category" }
+        source: { $ref: "#/components/schemas/Source" }
+    Health:
+      type: object
+      properties:
+        status: { type: string, example: ok }
+        version: { type: string }
+        provider:
+          type: object
+          properties:
+            name: { type: string }
+            kind: { type: string, enum: [fixture, live] }
+            live: { type: boolean }
+        uptimeSeconds: { type: integer }
+        timestamp: { type: string, format: date-time }
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  issue: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
