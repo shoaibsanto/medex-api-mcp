@@ -30,9 +30,13 @@ function main(): void {
     );
   });
 
-  // Graceful shutdown.
+  // Graceful shutdown: release the headless browser (live provider) first.
   const shutdown = (): void => {
-    server.close(() => process.exit(0));
+    const closeable = provider as { close?: () => Promise<void> };
+    const released = typeof closeable.close === "function" ? closeable.close() : Promise.resolve();
+    released.catch(() => undefined).finally(() => {
+      server.close(() => process.exit(0));
+    });
     // Force-exit if close hangs.
     setTimeout(() => process.exit(0), 5000).unref();
   };

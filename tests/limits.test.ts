@@ -23,18 +23,20 @@ describe("Rate limiting", () => {
 });
 
 describe("Provider factory", () => {
-  it("returns the fixture provider by default", () => {
+  it("returns the live browser provider by default", () => {
     const prev = process.env.MEDEX_PROVIDER;
     delete process.env.MEDEX_PROVIDER;
     const p = buildProvider();
-    expect(p.name).toBe("fixture");
-    expect(p.isLive).toBe(false);
+    expect(p.name).toBe("medex-live");
+    expect(p.isLive).toBe(true);
     if (prev !== undefined) process.env.MEDEX_PROVIDER = prev;
   });
 
-  it("explicitly rejects MEDEX_PROVIDER=live (no authorized source)", () => {
-    process.env.MEDEX_PROVIDER = "live";
-    expect(() => buildProvider()).toThrow(/not supported yet|DATA_SOURCES/i);
+  it("returns the fixture provider when MEDEX_PROVIDER=fixture", () => {
+    process.env.MEDEX_PROVIDER = "fixture";
+    const p = buildProvider();
+    expect(p.name).toBe("fixture");
+    expect(p.isLive).toBe(false);
     delete process.env.MEDEX_PROVIDER;
   });
 

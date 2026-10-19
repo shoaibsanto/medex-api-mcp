@@ -7,11 +7,15 @@ import { FixtureProvider } from "../src/provider/fixture-provider.js";
  * _registeredTools map. This verifies each tool is registered, validates its
  * input, and returns structured JSON with source attribution — without needing
  * a full stdio transport round-trip.
+ *
+ * These tests inject the offline FixtureProvider so they run without a
+ * browser or network. Live-provider behaviour is covered by
+ * tests/live-provider.test.ts and tests/extract.test.ts.
  */
 type ToolHandler = (args: Record<string, unknown>) => Promise<{ content: Array<{ type: string; text: string }> }>;
 
 function getTool(name: string): ToolHandler {
-  const server = buildServer() as unknown as {
+  const server = buildServer(new FixtureProvider()) as unknown as {
     _registeredTools: Record<string, { handler: ToolHandler }>;
   };
   const t = server._registeredTools[name];

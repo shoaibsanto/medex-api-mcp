@@ -1,16 +1,19 @@
 openapi: 3.0.3
 info:
   title: MedEx API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     A REST API for Bangladesh medicine information.
 
-    **Data source & authorization:** This API ships with a **synthetic fixture
-    provider** by default. It does **not** serve live MedEx data. No official or
-    licensed MedEx API was available at the time of writing, and no written
-    authorization to scrape or redistribute MedEx's database exists. All records
-    returned by the default provider are clearly marked `source.kind: "fixture"`
-    and must never be used for clinical decisions. See DATA_SOURCES.md.
+    **Data source:** The default provider retrieves records **live from
+    medex.com.bd at request time** by driving a headless browser through the
+    website's own pages (Playwright + a locally installed Chrome/Edge/Chromium).
+    There is no database and no cached dataset. Every record carries
+    `source.kind: "live"` with the exact page URL and a retrieval timestamp.
+    Fields not published on the fetched page (e.g. prices on search-result rows)
+    are returned as `null`, never invented. An explicit offline fixture mode
+    (`MEDEX_PROVIDER=fixture`) serves synthetic records for development only,
+    marked `source.kind: "fixture"`. See DATA_SOURCES.md.
   license:
     name: MIT
 servers:
@@ -259,6 +262,8 @@ components:
         hasNext: { type: boolean }
         hasPrev: { type: boolean }
         query: { type: string, nullable: true }
+        totalExact: { type: boolean }
+        note: { type: string, nullable: true }
     Medicine:
       type: object
       properties:
@@ -266,11 +271,11 @@ components:
         name: { type: string }
         generic: { type: string }
         activeIngredients: { type: array, items: { type: string } }
-        strength: { type: string }
+        strength: { type: string, nullable: true }
         dosageForm: { type: string }
-        manufacturerId: { type: string }
-        manufacturerName: { type: string }
-        package: { type: string }
+        manufacturerId: { type: string, nullable: true }
+        manufacturerName: { type: string, nullable: true }
+        package: { type: string, nullable: true }
         priceBdt: { type: number, nullable: true }
         categories: { type: array, items: { type: string } }
         source: { $ref: "#/components/schemas/Source" }
@@ -281,7 +286,7 @@ components:
         name: { type: string }
         activeIngredients: { type: array, items: { type: string } }
         description: { type: string, nullable: true }
-        brandCount: { type: integer }
+        brandCount: { type: integer, nullable: true }
         source: { $ref: "#/components/schemas/Source" }
     Manufacturer:
       type: object
@@ -290,7 +295,7 @@ components:
         name: { type: string }
         description: { type: string, nullable: true }
         website: { type: string, nullable: true }
-        productCount: { type: integer }
+        productCount: { type: integer, nullable: true }
         source: { $ref: "#/components/schemas/Source" }
     Category:
       type: object
@@ -298,7 +303,7 @@ components:
         id: { type: string }
         name: { type: string }
         description: { type: string, nullable: true }
-        medicineCount: { type: integer }
+        medicineCount: { type: integer, nullable: true }
         source: { $ref: "#/components/schemas/Source" }
     MedicinePage:
       type: object

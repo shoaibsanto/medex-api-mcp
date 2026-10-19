@@ -39,7 +39,8 @@ mcp_servers:
 ```
 
 Then restart Hermes (or reload MCP servers). The nine tools below appear in the
-tool list. No API key or token is required for the fixture provider.
+tool list. No API key or token is required — the server drives a local
+headless browser against medex.com.bd.
 
 > On Windows use a forward-slash absolute path to `dist/mcp/index.js`.
 
@@ -73,8 +74,8 @@ Any MCP client that speaks stdio can launch the server. Generic config shape:
 | `list_category_medicines` | `id` (req), `page`, `limit` | That category's medicines |
 
 Each tool returns **structured JSON as text content**, with the same `data` /
-`meta` / `source` shape as the REST API. `source.kind` is `"fixture"` for the
-default provider.
+`meta` / `source` shape as the REST API. `source.kind` is `"live"`, with the
+exact page URL and retrieval timestamp, for the default provider.
 
 ## Behaviour guarantees
 
@@ -90,6 +91,11 @@ default provider.
 ## Data-source note
 
 The MCP server reads from the same `Provider` as the REST API. By default that
-is the **synthetic fixture provider** — no live MedEx data. See
+is the **live browser provider**: each tool call navigates medex.com.bd at
+request time via Playwright + a locally installed Chrome/Edge/Chromium, with a
+politeness delay between page loads. No database, no cached dataset, no fixture
+fallback — a failed navigation surfaces as an explicit `provider_error`.
+Search-result rows do not publish prices (`priceBdt`/`package` are `null`
+there); call `get_medicine_details` for the full record. See
 [DATA_SOURCES.md](DATA_SOURCES.md). Medicine information returned here is
 **not** a substitute for professional medical advice.

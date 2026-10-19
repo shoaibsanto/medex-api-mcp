@@ -23,7 +23,7 @@ export function loadConfig(): Config {
   return {
     port: intEnv("PORT", 3000),
     host: process.env.HOST ?? "127.0.0.1",
-    providerKind: (process.env.MEDEX_PROVIDER ?? "fixture").toLowerCase(),
+    providerKind: (process.env.MEDEX_PROVIDER ?? "live").toLowerCase(),
     corsOrigin: rawOrigin.includes(",")
       ? rawOrigin.split(",").map((s) => s.trim())
       : rawOrigin,

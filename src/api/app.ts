@@ -89,7 +89,7 @@ export function createApp(opts: AppOptions): Express {
   });
 
   app.get("/api/v1/ready", (_req, res) => {
-    // Ready as long as the provider is constructed (fixture always is).
+    // Ready as long as the provider is constructed.
     res.json({ ready: true, provider: provider.name });
   });
 

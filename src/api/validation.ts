@@ -28,7 +28,7 @@ export const listSchema = paginationSchema.extend({
   q: z.string().trim().max(200).optional(),
 });
 
-/** Path param for :id, constrained to the fixture id shape. */
+/** Path param for :id, constrained to a safe identifier shape. */
 export const idSchema = z
   .string()
   .trim()

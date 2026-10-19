@@ -1,36 +1,29 @@
 import type { Provider } from "./provider.js";
 import { FixtureProvider } from "./fixture-provider.js";
+import { LiveProvider } from "./live-provider.js";
 
 /**
  * buildProvider returns the configured data provider.
  *
- * Currently only the synthetic fixture provider is implemented, because no
- * authorized live MedEx feed exists (see DATA_SOURCES.md). The factory is the
- * single place a future authorized LiveProvider would be wired in: set
- * MEDX_PROVIDER=live plus the required credentials, and return the live
- * implementation instead. Routes and the MCP server depend only on the
- * Provider interface, so they need no changes.
+ * Default: the live browser provider, which navigates medex.com.bd on demand.
+ * MEDEX_PROVIDER=fixture selects the synthetic development fixtures — this is
+ * an explicit, opt-in development/testing mode and must never back production
+ * traffic. Any other value throws, so a typo can never silently fall back to
+ * fixtures.
  */
 export function buildProvider(): Provider {
-  const kind = (process.env.MEDEX_PROVIDER ?? "fixture").toLowerCase();
+  const kind = (process.env.MEDEX_PROVIDER ?? "live").toLowerCase();
 
   switch (kind) {
+    case "live":
+      return new LiveProvider();
     case "fixture":
       return new FixtureProvider();
-    case "live":
-      // NOTE: intentionally not implemented. Connecting to a live MedEx feed
-      // requires written authorization and an official/ licensed data source.
-      // See DATA_SOURCES.md. Throwing here keeps the failure explicit rather
-      // than silently serving fixture data as if it were live.
-      throw new Error(
-        "MEDEX_PROVIDER=live is not supported yet: no authorized live data " +
-          "source is configured. See DATA_SOURCES.md. Use MEDEX_PROVIDER=fixture " +
-          "(the default) for development.",
-      );
     default:
-      throw new Error(`Unknown MEDEX_PROVIDER value: "${kind}". Use "fixture".`);
+      throw new Error(`Unknown MEDEX_PROVIDER value: "${kind}". Use "live" or "fixture".`);
   }
 }
 
 export type { Provider } from "./provider.js";
 export { FixtureProvider } from "./fixture-provider.js";
+export { LiveProvider } from "./live-provider.js";

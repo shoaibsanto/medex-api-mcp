@@ -5,8 +5,8 @@
 - Keep **provider-specific data access** separate from business logic.
 - Serve the same capabilities through **two interfaces** (REST + MCP) without
   duplicating logic.
-- Make swapping in an **authorized live provider** a localized change.
-- Ship **offline** with zero credentials via a synthetic fixture provider.
+- Retrieve data **live, on demand** — no database, no cached dataset.
+- Keep a **fixture provider** selectable for offline development and tests.
 
 ## Components
 
@@ -21,13 +21,19 @@ src/
     validation.ts          Zod schemas for query/path params
   provider/
     provider.ts            Provider interface (the seam)
-    fixture-provider.ts    Synthetic fixture implementation
+    live-provider.ts       Live browser implementation (default)
+    fixture-provider.ts    Synthetic fixture implementation (MEDEX_PROVIDER=fixture)
     index.ts               buildProvider() factory
+  browser/
+    session.ts             Playwright browser lifecycle + politeness queue
+    extract.ts             cheerio parsers (HTML -> records)
   mcp/
     server.ts              MCP SDK server + tool definitions
     index.ts               MCP stdio entry point
 fixtures/
-  medex-fixtures.json      Synthetic development records
+  medex-fixtures.json      Synthetic development records (fixture mode only)
+scripts/
+  live-smoke.mjs           Opt-in live smoke test against medex.com.bd
 ```
 
 ## The Provider seam
@@ -57,9 +63,12 @@ interface Provider {
 Both the Express routes and the MCP tools depend **only** on this interface.
 Neither knows whether the data is a fixture or a live feed.
 
-`buildProvider()` selects the implementation from `MEDEX_PROVIDER`. The `live`
-case currently **throws** on purpose: no authorized live source exists, and
-silently serving fixtures as if they were live would be misleading. See
+`buildProvider()` selects the implementation from `MEDEX_PROVIDER`. The default
+is `live` (`LiveProvider`): it drives a headless browser through medex.com.bd
+pages at request time, parses the rendered HTML with cheerio, and returns only
+fields actually present on each page. `fixture` is an explicit offline switch
+for development and tests. There is no silent fallback between the two — a
+failed live request raises an explicit error. See
 [DATA_SOURCES.md](DATA_SOURCES.md).
 
 ## Request flow
@@ -98,8 +107,19 @@ are identical across them — verified by the API↔MCP consistency test.
 - 100 kB JSON body limit.
 - No secrets in code — config is read from env at runtime.
 
-## Concurrency & performance
+## Live browser pipeline & concurrency
 
-The fixture provider loads once at startup and serves from in-memory arrays.
-There is no database or network dependency in the default configuration, so
-latency is negligible and the service is safe to run on minimal hardware.
+`BrowserSession` lazily launches one headless browser per process and
+**serializes** navigations through a FIFO queue with a configurable politeness
+delay (`MEDEX_REQUEST_DELAY_MS`, default 1200 ms) between page loads. Each
+request performs a **fresh navigation**; nothing is persisted between
+requests. `extract.ts` parses the fetched HTML with cheerio, so extraction
+logic is testable without a browser.
+
+Failure handling: navigation timeouts, upstream 403/429/5xx, and unparseable
+pages raise `NavigationError`/`LiveAccessError` (surfaced by the MCP/API layers
+as a structured `provider_error`). Unknown ids return `null` → `not_found`.
+The live provider never falls back to fixture data or fabricated records.
+
+The fixture provider loads once at startup and serves from in-memory arrays —
+useful for offline tests, not for production data.

@@ -89,7 +89,9 @@ export class FixtureProvider implements Provider {
     const byManufacturer = new Map<string, string[]>();
     const byCategory = new Map<string, string[]>();
     for (const m of this.medicines) {
-      (byManufacturer.get(m.manufacturerId) ?? byManufacturer.set(m.manufacturerId, []).get(m.manufacturerId)!).push(m.id);
+      if (m.manufacturerId) {
+        (byManufacturer.get(m.manufacturerId) ?? byManufacturer.set(m.manufacturerId, []).get(m.manufacturerId)!).push(m.id);
+      }
       for (const c of m.categories) {
         (byCategory.get(c) ?? byCategory.set(c, []).get(c)!).push(m.id);
       }
@@ -138,7 +140,7 @@ export class FixtureProvider implements Provider {
           matches(m.name, q) ||
           matches(m.generic, q) ||
           m.activeIngredients.some((a) => matches(a, q)) ||
-          matches(m.manufacturerName, q),
+          (m.manufacturerName ? matches(m.manufacturerName, q) : false),
       );
     }
     return paginate(results, query.page ?? 1, query.limit ?? 20, q);
